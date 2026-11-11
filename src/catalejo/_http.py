@@ -90,17 +90,21 @@ class HttpClient:
         params: Mapping[str, str | int] | None = None,
         *,
         use_cache: bool = True,
+        ttl: float | None = None,
     ) -> Response:
+        """GET a cnmv.es URL. `ttl` overrides the client's cache_ttl for this call
+        (use `math.inf` for things that never change, like filed documents)."""
         _check_host(url)
         key = _cache_key(url, params)
+        ttl = self.cache_ttl if ttl is None else ttl
 
-        if use_cache and self.cache_ttl > 0:
-            cached = self._read_cache(key)
+        if use_cache and ttl > 0:
+            cached = self._read_cache(key, ttl)
             if cached is not None:
                 return cached
 
         response = self._fetch(url, params)
-        if use_cache and self.cache_ttl > 0:
+        if use_cache and ttl > 0:
             self._write_cache(key, response)
         return response
 
@@ -154,12 +158,12 @@ class HttpClient:
             f"giving up on {url} after {self.max_retries + 1} attempts ({last_error})"
         )
 
-    def _read_cache(self, key: str) -> Response | None:
+    def _read_cache(self, key: str, ttl: float) -> Response | None:
         meta_path = self.cache_dir / f"{key}.json"
         body_path = self.cache_dir / f"{key}.bin"
         try:
             meta = json.loads(meta_path.read_text())
-            if time.time() - meta["fetched_at"] > self.cache_ttl:
+            if time.time() - meta["fetched_at"] > ttl:
                 return None
             content = body_path.read_bytes()
         except (OSError, ValueError, KeyError):
