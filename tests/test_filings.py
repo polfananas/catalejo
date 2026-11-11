@@ -99,3 +99,38 @@ def test_matches_issuer() -> None:
 def test_empty_issuer_is_rejected() -> None:
     with pytest.raises(ValueError):
         matches_issuer(_filing("CELLNEX TELECOM, S.A.", "A64907306"), "   ")
+
+
+EMPTY_PAGE = '<section id="maincontent"><ul id="listaElementosPrimernivel"></ul></section>'
+
+
+def test_nif_query_is_filtered_by_the_cnmv(tmp_path: Path) -> None:
+    seen: list[httpx.URL] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request.url)
+        if request.url.params.get("nif") != "A64907306":  # Cellnex is stored without dash
+            return httpx.Response(200, text=EMPTY_PAGE)
+        name = {"0": "ip_dias7_page1.html", "1": "oir_dias3_page8_last.html"}[
+            request.url.params["page"]
+        ]
+        return httpx.Response(200, text=(FIXTURES / name).read_text(encoding="utf-8"))
+
+    client = HttpClient(
+        cache_dir=tmp_path,
+        transport=httpx.MockTransport(handler),
+        min_interval=0,
+        sleep=lambda s: None,
+    )
+    result = filings(days=7, kind="IP", issuer="a-64907306", client=client)
+
+    assert [f.registry_number for f in result] == [3409]
+    assert {u.params["nif"] for u in seen} == {"A64907306", "A-64907306"}
+    assert len(seen) == 3  # two pages for the right variant, one empty page for the other
+
+
+def test_name_query_scans_everything(client: HttpClient, requests_seen: list[httpx.URL]) -> None:
+    result = filings(days=7, kind="IP", issuer="cellnex", client=client)
+
+    assert [f.issuer for f in result] == ["CELLNEX TELECOM, S.A."]
+    assert all("nif" not in u.params for u in requests_seen)
