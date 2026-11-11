@@ -29,6 +29,8 @@ class Filing:
     """Official registry number. IP and OIR are numbered separately."""
     document_url: str
     """Link to the filed document (usually a PDF)."""
+    issuer_nif_raw: str | None = None
+    """NIF exactly as the CNMV writes it (sometimes "A-28004885"). Needed to query by issuer."""
 
     @property
     def document_id(self) -> str | None:

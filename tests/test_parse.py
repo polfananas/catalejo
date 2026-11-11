@@ -29,6 +29,7 @@ def test_oir_first_page() -> None:
     assert first.registered_at == datetime(2026, 11, 6, 14, 50, tzinfo=MADRID)
     assert first.issuer == "EUROCAJA RURAL, SOCIEDAD COOPERATIVA DE CRÉDITO"
     assert first.issuer_nif == "F45003993"
+    assert first.issuer_nif_raw == "F45003993"
     assert first.category == "Otra información relevante"
     assert first.title == "La Entidad informa sobre cambios en su Consejo Rector"
     assert first.registry_number == 43535
@@ -49,7 +50,8 @@ def test_last_page_and_nif_with_dash() -> None:
     assert page.is_last
     acs = page.filings[0]
     assert acs.issuer.startswith("ACS,")
-    assert acs.issuer_nif == "A28004885"  # "A-28004885" in the HTML
+    assert acs.issuer_nif == "A28004885"
+    assert acs.issuer_nif_raw == "A-28004885"  # as in the HTML; the CNMV only matches this form
     assert acs.category == "Programas de recompra de acciones, estabilización y autocartera"
 
 

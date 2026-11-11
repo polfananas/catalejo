@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from datetime import datetime
+from urllib.parse import unquote
 from zoneinfo import ZoneInfo
 
 from selectolax.lexbor import LexborHTMLParser as HTMLParser
@@ -64,15 +65,17 @@ def _parse_entry(node: Node, kind: FilingKind) -> Filing:
     except ValueError as e:
         raise CatalejoParseError(f"bad date/time {date!r} {time!r}") from e
 
+    raw_nif = _nif_from_href(issuer_link.attributes.get("href") or "")
     return Filing(
         kind=kind,
         registered_at=registered_at,
         issuer=issuer_link.text(strip=True),
-        issuer_nif=_nif_from_href(issuer_link.attributes.get("href") or ""),
+        issuer_nif=normalize_nif(raw_nif) if raw_nif else None,
         category=_text(node, "span[id$=descripcionSubtituloCabecera]"),
         title=doc_link.text(strip=True),
         registry_number=int(registry.group(1)),
         document_url=(doc_link.attributes.get("href") or "").strip(),
+        issuer_nif_raw=raw_nif,
     )
 
 
@@ -88,7 +91,7 @@ def _parse_page_info(tree: HTMLParser) -> tuple[int, int]:
 
 def _nif_from_href(href: str) -> str | None:
     match = re.search(r"[?&]nif=([^&]+)", href, flags=re.IGNORECASE)
-    return normalize_nif(match.group(1)) if match else None
+    return unquote(match.group(1)).strip() if match else None
 
 
 def _required(node: Node, selector: str) -> Node:
