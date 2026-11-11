@@ -28,6 +28,10 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "ruff>=0.6", "mypy>=1.10"]
+mcp = ["mcp>=1.20,<2"]
+
+[project.scripts]
+catalejo-mcp = "catalejo.mcp_server:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/catalejo"]
