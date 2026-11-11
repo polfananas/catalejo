@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import re
 import unicodedata
+import warnings
+from datetime import date, datetime, timedelta
 from typing import Literal
 
 from catalejo._http import HttpClient
-from catalejo._parse import normalize_nif, parse_results_page
+from catalejo._parse import MADRID, normalize_nif, parse_results_page
 from catalejo.models import Filing, FilingKind
 
 BASE = "https://www.cnmv.es/portal"
@@ -17,6 +19,8 @@ RESULT_URLS: dict[FilingKind, str] = {
 }
 
 # Spanish NIF/CIF shapes: B12345678, A1234567B, 12345678Z (foreign issuers: N1234567X)
+MAX_DAYS = 90  # the CNMV answers HTTP 400 above ~91; longer windows go as a date range
+
 _NIF = re.compile(r"^(?:[A-Z]\d{7}[A-Z0-9]|\d{8}[A-Z])$")
 
 _client: HttpClient | None = None
@@ -34,16 +38,23 @@ def filings(
     kind: FilingKind | Literal["all"] = "all",
     issuer: str | None = None,
     *,
+    since: date | None = None,
+    until: date | None = None,
     max_pages: int = 50,
     client: HttpClient | None = None,
 ) -> list[Filing]:
-    """Filings registered at the CNMV in the last `days` days, newest first.
+    """Filings registered at the CNMV, newest first.
+
+    By default the last `days` days. Pass `since` (and optionally `until`) for a
+    fixed date range instead, e.g. to pull history.
 
     >>> import catalejo
     >>> catalejo.filings(days=3, kind="IP")  # doctest: +SKIP
+    >>> catalejo.filings(since=date(2024, 1, 1), issuer="A64907306")  # doctest: +SKIP
     """
     if days < 1:
         raise ValueError("days must be >= 1")
+    window = _window(days, since, until)
     client = client or _default_client()
     kinds: list[FilingKind] = ["IP", "OIR"] if kind == "all" else [kind]
 
@@ -56,12 +67,12 @@ def filings(
             # form it stores it, and that can have a dash or not, so try both.
             seen = set()
             for variant in (nif, f"{nif[0]}-{nif[1:]}"):
-                for f in _fetch_all_pages(client, k, {"dias": days, "nif": variant}, max_pages):
+                for f in _fetch_all_pages(client, k, {**window, "nif": variant}, max_pages):
                     if f.registry_number not in seen:
                         seen.add(f.registry_number)
                         result.append(f)
         else:
-            result.extend(_fetch_all_pages(client, k, {"dias": days}, max_pages))
+            result.extend(_fetch_all_pages(client, k, window, max_pages))
 
     if issuer is not None:
         result = [f for f in result if matches_issuer(f, issuer)]
@@ -80,7 +91,25 @@ def _fetch_all_pages(
         out.extend(page.filings)
         if page.is_last or not page.filings:
             break
+    else:
+        warnings.warn(
+            f"stopped after max_pages={max_pages}; results are incomplete. "
+            "Narrow the date range or raise max_pages.",
+            stacklevel=3,
+        )
     return out
+
+
+def _window(days: int, since: date | None, until: date | None) -> dict[str, str | int]:
+    """Query params for the time window: `dias=N` when possible, a date range otherwise."""
+    if since is None and until is None and days <= MAX_DAYS:
+        return {"dias": days}
+    today = datetime.now(MADRID).date()
+    until = until or today
+    since = since or until - timedelta(days=days)
+    if since > until:
+        raise ValueError(f"since ({since}) is after until ({until})")
+    return {"fechaDesde": f"{since:%d/%m/%Y}", "fechaHasta": f"{until:%d/%m/%Y}"}
 
 
 def _as_nif(query: str) -> str | None:

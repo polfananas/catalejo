@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 
 import httpx
@@ -61,7 +61,8 @@ def test_all_merges_both_channels_newest_first(client: HttpClient) -> None:
 
 
 def test_max_pages_is_respected(client: HttpClient, requests_seen: list[httpx.URL]) -> None:
-    filings(days=7, kind="IP", max_pages=1, client=client)
+    with pytest.warns(UserWarning):
+        filings(days=7, kind="IP", max_pages=1, client=client)
     assert len(requests_seen) == 1
 
 
@@ -134,3 +135,34 @@ def test_name_query_scans_everything(client: HttpClient, requests_seen: list[htt
 
     assert [f.issuer for f in result] == ["CELLNEX TELECOM, S.A."]
     assert all("nif" not in u.params for u in requests_seen)
+
+
+def test_date_range_uses_fecha_params(client: HttpClient, requests_seen: list[httpx.URL]) -> None:
+    filings(kind="IP", since=date(2025, 1, 1), until=date(2025, 12, 31), client=client)
+
+    first = requests_seen[0].params
+    assert first["fechaDesde"] == "01/01/2025"
+    assert first["fechaHasta"] == "31/12/2025"
+    assert "dias" not in first
+
+
+def test_more_than_90_days_becomes_a_date_range(
+    client: HttpClient, requests_seen: list[httpx.URL]
+) -> None:
+    filings(days=180, kind="IP", client=client)
+
+    params = requests_seen[0].params
+    assert "dias" not in params
+    since = datetime.strptime(params["fechaDesde"], "%d/%m/%Y").date()
+    until = datetime.strptime(params["fechaHasta"], "%d/%m/%Y").date()
+    assert (until - since).days == 180
+
+
+def test_since_after_until_is_an_error(client: HttpClient) -> None:
+    with pytest.raises(ValueError):
+        filings(since=date(2026, 1, 2), until=date(2026, 1, 1), client=client)
+
+
+def test_hitting_max_pages_warns(client: HttpClient) -> None:
+    with pytest.warns(UserWarning, match="incomplete"):
+        filings(days=7, kind="IP", max_pages=1, client=client)
