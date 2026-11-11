@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import dataclasses
+import logging
 from typing import Any, Literal
 
 from mcp.server.fastmcp import FastMCP
@@ -12,16 +14,9 @@ mcp = FastMCP("catalejo")
 
 
 def _as_dict(f: catalejo.Filing) -> dict[str, Any]:
-    return {
-        "kind": f.kind,
-        "registered_at": f.registered_at.isoformat(),
-        "issuer": f.issuer,
-        "issuer_nif": f.issuer_nif,
-        "category": f.category,
-        "title": f.title,
-        "registry_number": f.registry_number,
-        "document_url": f.document_url,
-    }
+    d = dataclasses.asdict(f)
+    d["registered_at"] = f.registered_at.isoformat()  # datetime isn't JSON
+    return d
 
 
 @mcp.tool()
@@ -49,6 +44,7 @@ def issuer_filings(
 
 
 def main() -> None:
+    logging.getLogger("httpx").setLevel(logging.WARNING)  # one INFO line per request is noise
     mcp.run()  # stdio by default
 
 
