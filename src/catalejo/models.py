@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime
 from typing import Literal
 from urllib.parse import parse_qs, urlsplit
 
@@ -37,3 +37,25 @@ class Filing:
         """The GUID the CNMV uses to identify the document, if present in the URL."""
         values = parse_qs(urlsplit(self.document_url).query).get("t")
         return values[0].strip("{}") if values else None
+
+
+@dataclass(frozen=True, slots=True)
+class Security:
+    """A security registered under an issuer at the CNMV's ISIN agency (ANCV)."""
+
+    isin: str
+    fisn: str | None
+    """Short name, e.g. "CLNX/AC 0.25" (AC = acciones / shares, OB = bonds)."""
+    cfi: str | None
+    """ISO 10962 classification. Shares start with "ES". Empty for most foreign issuers."""
+    currency: str | None = None
+    issue_date: date | None = None
+    maturity_date: date | None = None
+    outstanding: float | None = None
+    """Number of securities (shares) or amount issued (debt)."""
+    nominal: float | None = None
+    interest_rate: float | None = None
+
+    @property
+    def is_share(self) -> bool:
+        return (self.cfi or "").startswith("ES")

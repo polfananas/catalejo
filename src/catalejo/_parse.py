@@ -4,14 +4,14 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime
 from urllib.parse import unquote
 from zoneinfo import ZoneInfo
 
 from selectolax.lexbor import LexborHTMLParser as HTMLParser
 from selectolax.lexbor import LexborNode as Node
 
-from catalejo.models import Filing, FilingKind
+from catalejo.models import Filing, FilingKind, Security
 
 MADRID = ZoneInfo("Europe/Madrid")
 
@@ -103,3 +103,60 @@ def _required(node: Node, selector: str) -> Node:
 
 def _text(node: Node, selector: str) -> str:
     return _required(node, selector).text(strip=True)
+
+
+@dataclass(frozen=True, slots=True)
+class SecuritiesPage:
+    securities: list[Security]
+    page: int
+    total_pages: int
+
+    @property
+    def is_last(self) -> bool:
+        return self.page >= self.total_pages
+
+
+def parse_securities_page(html: str) -> SecuritiesPage:
+    tree = HTMLParser(html)
+    securities = []
+    for row in tree.css("table#ctl00_ContentPrincipal_grdDatos tbody tr"):
+        cells = {
+            (td.attributes.get("data-th") or ""): td.text().strip() or None for td in row.css("td")
+        }
+        isin = cells.get("ISIN")
+        if not isin:
+            raise CatalejoParseError(f"ISIN row without ISIN: {row.text(strip=True)[:120]!r}")
+        securities.append(
+            Security(
+                isin=isin,
+                fisn=cells.get("FISN"),
+                cfi=cells.get("CFI 2015"),
+                currency=cells.get("Moneda"),
+                issue_date=_es_date(cells.get("Fecha emisión")),
+                maturity_date=_es_date(cells.get("Fecha vencimiento")),
+                outstanding=_es_number(cells.get("Nº valores / Saldo emitido")),
+                nominal=_es_number(cells.get("Nominal / VMN / Precio")),
+                interest_rate=_es_number(cells.get("Interés")),
+            )
+        )
+    page, total = _parse_page_info(tree)
+    return SecuritiesPage(securities=securities, page=page, total_pages=total)
+
+
+def _es_number(text: str | None) -> float | None:
+    """ "4.768.462.486,00" -> 4768462486.0"""
+    if not text:
+        return None
+    try:
+        return float(text.replace(".", "").replace(",", "."))
+    except ValueError as e:
+        raise CatalejoParseError(f"bad number {text!r}") from e
+
+
+def _es_date(text: str | None) -> date | None:
+    if not text:
+        return None
+    try:
+        return datetime.strptime(text, "%d/%m/%Y").date()
+    except ValueError as e:
+        raise CatalejoParseError(f"bad date {text!r}") from e
