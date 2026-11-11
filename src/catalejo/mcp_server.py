@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import dataclasses
 import logging
+from datetime import date
 from typing import Any, Literal
 
 from mcp.server.fastmcp import FastMCP
@@ -32,15 +33,25 @@ def latest_filings(
 
 @mcp.tool()
 def issuer_filings(
-    issuer: str, days: int = 7, kind: Literal["IP", "OIR", "all"] = "all"
+    issuer: str,
+    days: int = 7,
+    kind: Literal["IP", "OIR", "all"] = "all",
+    since: date | None = None,
+    until: date | None = None,
+    limit: int = 50,
 ) -> list[dict[str, Any]]:
     """Filings from one specific company at the Spanish CNMV, newest first.
 
-    issuer: company name or part of it ("Cellnex", "telefonica") or its Spanish
-    tax id / NIF ("A64907306"). Accents and case don't matter.
-    Keep `days` small (7-14): each extra week means more pages to download.
+    issuer: its Spanish tax id / NIF ("A64907306") is best: the CNMV filters by it
+    directly, so even years of history come back in seconds. A company name or part
+    of it ("Cellnex", "telefonica") also works but scans every filing, so keep
+    `days` small (7-14) when searching by name.
+    since / until: optional date range (YYYY-MM-DD) for history; overrides `days`.
+    Inside information (IP) exists from Feb 2020 onwards.
+    limit: max filings returned (the newest ones).
     """
-    return [_as_dict(f) for f in catalejo.filings(days=days, kind=kind, issuer=issuer)]
+    found = catalejo.filings(days=days, kind=kind, issuer=issuer, since=since, until=until)
+    return [_as_dict(f) for f in found[:limit]]
 
 
 def main() -> None:
