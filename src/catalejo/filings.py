@@ -74,6 +74,8 @@ def matches_issuer(filing: Filing, query: str) -> bool:
     ("cellnex", "Telefónica" == "telefonica").
     """
     q = query.strip()
+    if not q:
+        raise ValueError("issuer can't be empty")
     if filing.issuer_nif and normalize_nif(q) == filing.issuer_nif:
         return True
     return _fold(q) in _fold(filing.issuer)

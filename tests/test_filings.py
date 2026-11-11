@@ -94,3 +94,8 @@ def test_matches_issuer() -> None:
     assert matches_issuer(telefonica, "Telefónica")
     assert not matches_issuer(cellnex, "telefonica")
     assert not matches_issuer(_filing("SIN NIF", None), "A64907306")
+
+
+def test_empty_issuer_is_rejected() -> None:
+    with pytest.raises(ValueError):
+        matches_issuer(_filing("CELLNEX TELECOM, S.A.", "A64907306"), "   ")
