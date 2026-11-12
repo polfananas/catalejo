@@ -97,6 +97,7 @@ catalejo talks only to `cnmv.es`, sends an identifiable User-Agent, makes **at m
 - **Inside information exists as its own channel since 8 February 2020.** Before that, everything was published as *hechos relevantes*, which catalejo doesn't cover yet.
 - Searching by **NIF** is fast (the CNMV filters). Searching by **name** works, but scans every filing in the window, so keep the window short.
 - Times are the CNMV's registration time, to the minute.
+- Filings come in the language the issuer used, which is almost always Spanish.
 - Early days: the API may still change before 1.0.
 
 ## Roadmap
