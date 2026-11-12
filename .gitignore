@@ -14,3 +14,7 @@ htmlcov/
 
 # local HTTP cache for CNMV requests
 .catalejo_cache/
+
+# raw screen recordings (only the converted GIFs go in the repo)
+docs/*.mov
+docs/Screen*

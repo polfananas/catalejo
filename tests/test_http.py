@@ -3,7 +3,7 @@ from pathlib import Path
 import httpx
 import pytest
 
-from catalejo._http import USER_AGENT, CatalejoHTTPError, HttpClient
+from catalejo._http import USER_AGENT, CNMVRequestError, HttpClient
 
 URL = "https://www.cnmv.es/portal/test"
 
@@ -99,7 +99,7 @@ def test_gives_up_after_max_retries(tmp_path: Path) -> None:
         return httpx.Response(500)
 
     client, _ = make_client(tmp_path, handler, max_retries=2)
-    with pytest.raises(CatalejoHTTPError, match="3 attempts"):
+    with pytest.raises(CNMVRequestError, match="3 attempts"):
         client.get(URL)
 
 
@@ -112,7 +112,7 @@ def test_404_is_not_retried(tmp_path: Path) -> None:
         return httpx.Response(404)
 
     client, _ = make_client(tmp_path, handler)
-    with pytest.raises(CatalejoHTTPError, match="404"):
+    with pytest.raises(CNMVRequestError, match="404"):
         client.get(URL)
     assert calls == 1
 

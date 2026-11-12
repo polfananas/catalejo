@@ -5,7 +5,7 @@ import pytest
 
 from catalejo._parse import (
     MADRID,
-    CatalejoParseError,
+    CNMVParseError,
     normalize_nif,
     parse_results_page,
 )
@@ -79,7 +79,7 @@ def test_broken_entry_raises_instead_of_guessing() -> None:
     <ul id="listaElementosPrimernivel">
       <li class="blocks-single"><ul><li class="fecha-con-hora">06/11/2026</li></ul></li>
     </ul>"""
-    with pytest.raises(CatalejoParseError):
+    with pytest.raises(CNMVParseError):
         parse_results_page(html, "OIR")
 
 

@@ -19,7 +19,7 @@ _PAGE_INFO = re.compile(r"(\d+)\D+(\d+)")  # "Página 1 de 8" / "Page 1 out of 8
 _REGISTRY = re.compile(r"(\d+)\s*$")
 
 
-class CatalejoParseError(ValueError):
+class CNMVParseError(ValueError):
     """The page didn't look like we expected. Probably the CNMV changed its HTML."""
 
 
@@ -58,12 +58,12 @@ def _parse_entry(node: Node, kind: FilingKind) -> Filing:
     )
     registry = _REGISTRY.search(registry_text)
     if registry is None:
-        raise CatalejoParseError(f"no registry number in entry: {node.text(strip=True)[:120]!r}")
+        raise CNMVParseError(f"no registry number in entry: {node.text(strip=True)[:120]!r}")
 
     try:
         registered_at = datetime.strptime(f"{date} {time}", "%d/%m/%Y %H:%M").replace(tzinfo=MADRID)
     except ValueError as e:
-        raise CatalejoParseError(f"bad date/time {date!r} {time!r}") from e
+        raise CNMVParseError(f"bad date/time {date!r} {time!r}") from e
 
     raw_nif = _nif_from_href(issuer_link.attributes.get("href") or "")
     return Filing(
@@ -85,7 +85,7 @@ def _parse_page_info(tree: HTMLParser) -> tuple[int, int]:
         return 1, 1  # single page of results: the CNMV shows no paginator
     match = _PAGE_INFO.search(info.text())
     if match is None:
-        raise CatalejoParseError(f"can't read pagination from {info.text()!r}")
+        raise CNMVParseError(f"can't read pagination from {info.text()!r}")
     return int(match.group(1)), int(match.group(2))
 
 
@@ -97,7 +97,7 @@ def _nif_from_href(href: str) -> str | None:
 def _required(node: Node, selector: str) -> Node:
     found = node.css_first(selector)
     if found is None:
-        raise CatalejoParseError(f"missing {selector!r} in entry: {node.text(strip=True)[:120]!r}")
+        raise CNMVParseError(f"missing {selector!r} in entry: {node.text(strip=True)[:120]!r}")
     return found
 
 
@@ -125,7 +125,7 @@ def parse_securities_page(html: str) -> SecuritiesPage:
         }
         isin = cells.get("ISIN")
         if not isin:
-            raise CatalejoParseError(f"ISIN row without ISIN: {row.text(strip=True)[:120]!r}")
+            raise CNMVParseError(f"ISIN row without ISIN: {row.text(strip=True)[:120]!r}")
         securities.append(
             Security(
                 isin=isin,
@@ -150,7 +150,7 @@ def _es_number(text: str | None) -> float | None:
     try:
         return float(text.replace(".", "").replace(",", "."))
     except ValueError as e:
-        raise CatalejoParseError(f"bad number {text!r}") from e
+        raise CNMVParseError(f"bad number {text!r}") from e
 
 
 def _es_date(text: str | None) -> date | None:
@@ -159,4 +159,4 @@ def _es_date(text: str | None) -> date | None:
     try:
         return datetime.strptime(text, "%d/%m/%Y").date()
     except ValueError as e:
-        raise CatalejoParseError(f"bad date {text!r}") from e
+        raise CNMVParseError(f"bad date {text!r}") from e

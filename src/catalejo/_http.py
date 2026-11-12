@@ -30,7 +30,7 @@ ALLOWED_HOST_SUFFIX = "cnmv.es"
 RETRY_STATUSES = frozenset({429, 500, 502, 503, 504})
 
 
-class CatalejoHTTPError(RuntimeError):
+class CNMVRequestError(RuntimeError):
     """Raised when the CNMV can't be reached or keeps answering with errors."""
 
 
@@ -145,7 +145,7 @@ class HttpClient:
                     self._sleep(min(int(retry_after), 60))
                 continue
             if r.status_code >= 400:
-                raise CatalejoHTTPError(f"HTTP {r.status_code} for {r.url}")
+                raise CNMVRequestError(f"HTTP {r.status_code} for {r.url}")
 
             return Response(
                 url=str(r.url),
@@ -154,7 +154,7 @@ class HttpClient:
                 content_type=r.headers.get("Content-Type", ""),
             )
 
-        raise CatalejoHTTPError(
+        raise CNMVRequestError(
             f"giving up on {url} after {self.max_retries + 1} attempts ({last_error})"
         )
 
