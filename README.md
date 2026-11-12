@@ -10,7 +10,7 @@ Think of it as a small **SEC EDGAR for Spain**.
 
 > *Having had perfect understanding of all things from the very first, to write unto thee in order, that thou mightest know the certainty of those things.* (Luke 1:3-4)
 
-![catalejo in a terminal: the latest inside information, 176 BBVA filings since 2020, the whole BBVA–Sabadell takeover bid in order, and its outcome read from the CNMV's own PDF. All live data.](https://raw.githubusercontent.com/polfananas/catalejo/main/docs/demo.gif)
+![catalejo in a terminal: the latest price-sensitive announcements, 176 BBVA filings since 2020, the whole BBVA–Sabadell takeover bid in order, and its outcome read from the CNMV's own PDF. All live data.](https://raw.githubusercontent.com/polfananas/catalejo/main/docs/demo.gif)
 
 <!-- TODO: second GIF, Claude Desktop using the MCP server -->
 
@@ -34,7 +34,7 @@ Python 3.10+.
 
 ## What you can get
 
-**Inside information (IP) and other relevant information (OIR)**, the two channels issuers use to disclose anything that can move the price: results, M&A, takeover bids, guidance, board changes, buybacks...
+**Price-sensitive announcements (`IP`) and other regulatory announcements (`OIR`)**, the two channels issuers use to disclose anything that can move the price: results, M&A, takeover bids, guidance, board changes, buybacks...
 
 ```python
 from datetime import date
@@ -66,7 +66,7 @@ print(catalejo.document_text(f))     # needs catalejo[pdf]
 
 ## Use it from Claude (MCP)
 
-catalejo ships an MCP server with two tools, `latest_filings` and `issuer_filings`, so you can ask things like *"What inside information has Cellnex published since 2023? Group it by topic."*
+catalejo ships an MCP server with two tools, `latest_filings` and `issuer_filings`, so you can ask things like *"What price-sensitive news has Cellnex published since 2023? Group it by topic."*
 
 **Claude Desktop:** add this to `claude_desktop_config.json` (Settings → Developer → Edit Config) and restart the app:
 
@@ -92,7 +92,7 @@ catalejo talks only to `cnmv.es`, sends an identifiable User-Agent, makes **at m
 
 ## Good to know
 
-- **Inside information exists as its own channel since 8 February 2020.** Before that, everything was published as *hechos relevantes*, which catalejo doesn't cover yet.
+- **Price-sensitive announcements (`IP`) have their own channel since 8 February 2020.** Before that, everything was published as *hechos relevantes*, which catalejo doesn't cover yet.
 - Searching by **NIF** is fast (the CNMV filters). Searching by **name** works, but scans every filing in the window, so keep the window short.
 - Times are the CNMV's registration time, to the minute.
 - Filings come in the language the issuer used, which is almost always Spanish.
@@ -100,10 +100,10 @@ catalejo talks only to `cnmv.es`, sends an identifiable User-Agent, makes **at m
 
 ## Roadmap
 
-- [x] Inside information & other relevant information, with full history
+- [x] Price-sensitive and other regulatory announcements, with full history
 - [x] ISINs per issuer, text of filed PDFs
 - [x] MCP server
-- [ ] Directors' and managers' dealings (art. 19 MAR): a Spanish OpenInsider
+- [ ] Directors' and managers' share dealings (art. 19 MAR)
 - [ ] Net short positions
 - [ ] Takeover bids (OPAs): status, price, spread
 - [ ] Fund portfolios

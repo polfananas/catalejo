@@ -26,7 +26,7 @@ def latest_filings(
 ) -> list[dict[str, Any]]:
     """Latest filings published at the Spanish CNMV, newest first.
 
-    kind: "IP" = inside information (price-sensitive), "OIR" = other relevant information.
+    kind: "IP" = price-sensitive announcements, "OIR" = other regulatory announcements.
     """
     return [_as_dict(f) for f in catalejo.filings(days=days, kind=kind)]
 
@@ -47,7 +47,7 @@ def issuer_filings(
     of it ("Cellnex", "telefonica") also works but scans every filing, so keep
     `days` small (7-14) when searching by name.
     since / until: optional date range (YYYY-MM-DD) for history; overrides `days`.
-    Inside information (IP) exists from Feb 2020 onwards.
+    Price-sensitive announcements (IP) exist from Feb 2020 onwards.
     limit: max filings returned (the newest ones).
     """
     found = catalejo.filings(days=days, kind=kind, issuer=issuer, since=since, until=until)

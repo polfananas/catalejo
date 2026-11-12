@@ -1,4 +1,4 @@
-"""Inside information (IP) and other relevant information (OIR) published by issuers."""
+"""Price-sensitive (IP) and other regulatory (OIR) announcements published by issuers."""
 
 from __future__ import annotations
 
