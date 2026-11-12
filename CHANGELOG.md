@@ -1,6 +1,12 @@
 # Changelog
 
-## 0.1.0 (unreleased)
+## 0.1.1 (unreleased)
+
+- `catalejo` command line: `filings`, `securities`, `text` and `mcp`, with table, CSV or JSON output. Also runs as `python -m catalejo`, or without installing via `uvx catalejo`.
+- The MCP server can be started with `catalejo mcp` (the `catalejo-mcp` command still works).
+- `server.json` for the official MCP registry (`io.github.polfananas/catalejo`).
+
+## 0.1.0 (2026-11-12)
 
 First public release.
 

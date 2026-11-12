@@ -20,3 +20,25 @@ jobs:
       - run: pip install build
       - run: python -m build
       - uses: pypa/gh-action-pypi-publish@release/v1
+
+  # Then list the new version in the official MCP registry (registry.modelcontextprotocol.io).
+  # It checks that the version exists on PyPI and that the README carries our mcp-name.
+  mcp-registry:
+    needs: pypi
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Wait until PyPI serves the new version
+        run: |
+          version=$(jq -r .version server.json)
+          for i in $(seq 1 30); do
+            curl -sf "https://pypi.org/pypi/catalejo/$version/json" > /dev/null && exit 0
+            sleep 10
+          done
+          echo "catalejo $version not on PyPI after 5 minutes" && exit 1
+      - name: Install mcp-publisher
+        run: curl -sL https://github.com/modelcontextprotocol/registry/releases/download/v1.8.9/mcp-publisher_linux_amd64.tar.gz | tar xz mcp-publisher
+      - run: ./mcp-publisher login github-oidc
+      - run: ./mcp-publisher publish

@@ -1,3 +1,5 @@
+<p align="center"><img src="https://raw.githubusercontent.com/polfananas/catalejo/main/docs/catalejo-spyglass.png" alt="catalejo: a spyglass drawn in white line art on black"></p>
+
 # catalejo
 
 [![tests](https://github.com/polfananas/catalejo/actions/workflows/tests.yml/badge.svg)](https://github.com/polfananas/catalejo/actions/workflows/tests.yml)
@@ -25,12 +27,16 @@ Think of it as a small **SEC EDGAR for Spain**.
 ## Install
 
 ```bash
-pip install catalejo            # library
+pip install catalejo            # library + command line
 pip install "catalejo[mcp]"     # + MCP server for Claude and other agents
 pip install "catalejo[pdf]"     # + text extraction from filed PDFs
 ```
 
-Python 3.10+.
+Python 3.10+. Or try it without installing anything, with [uv](https://docs.astral.sh/uv/):
+
+```bash
+uvx catalejo filings --days 3 --kind IP
+```
 
 ## What you can get
 
@@ -64,6 +70,17 @@ print(catalejo.document_text(f))     # needs catalejo[pdf]
 [Security(isin='ES0105066007', fisn='CLNX/AC 0.25', cfi='ESVUFB', ...)]
 ```
 
+## Command line
+
+```bash
+catalejo filings --days 3 --kind IP                   # latest price-sensitive announcements
+catalejo filings --issuer A48265169 --since 2020 --kind IP --format csv > bbva.csv
+catalejo securities A64907306 --shares
+catalejo text "<document_url of a filing>"            # needs catalejo[pdf]
+```
+
+`--format csv` or `--format json` for piping into other tools. `catalejo --help` for the rest.
+
 ## Use it from Claude (MCP)
 
 catalejo ships an MCP server with two tools, `latest_filings` and `issuer_filings`, so you can ask things like *"What price-sensitive news has Cellnex published since 2023? Group it by topic."*
@@ -73,14 +90,17 @@ catalejo ships an MCP server with two tools, `latest_filings` and `issuer_filing
 ```json
 {
   "mcpServers": {
-    "catalejo": { "command": "catalejo-mcp" }
+    "catalejo": {
+      "command": "uvx",
+      "args": ["--from", "catalejo[mcp]", "catalejo", "mcp"]
+    }
   }
 }
 ```
 
-If Claude can't find the command, use the full path from `which catalejo-mcp`.
+That needs [uv](https://docs.astral.sh/uv/). If you'd rather `pip install "catalejo[mcp]"`, use `"command": "catalejo", "args": ["mcp"]`. If Claude can't find the command, put the full path from `which uvx` (or `which catalejo`).
 
-**Claude Code:** `claude mcp add catalejo -- catalejo-mcp`
+**Claude Code:** `claude mcp add catalejo -- uvx --from "catalejo[mcp]" catalejo mcp`
 
 ## Why not just ask an AI with web search?
 
@@ -103,14 +123,16 @@ catalejo talks only to `cnmv.es`, sends an identifiable User-Agent, makes **at m
 - [x] Price-sensitive and other regulatory announcements, with full history
 - [x] ISINs per issuer, text of filed PDFs
 - [x] MCP server
+- [x] Command line
 - [ ] Directors' and managers' share dealings (art. 19 MAR)
 - [ ] Net short positions
 - [ ] Takeover bids (OPAs): status, price, spread
 - [ ] Fund portfolios
-- [ ] CLI
 
 ## Data and license
 
 The data comes from the [CNMV](https://www.cnmv.es) public registers and remains subject to the CNMV's [legal notice](https://www.cnmv.es/Portal/utilidades/NotaLegal): reproduce it faithfully, and if you ever sell it, tell your buyers it's free at cnmv.es. catalejo is not affiliated with or endorsed by the CNMV.
 
 Code: MIT. See [LICENSE](https://github.com/polfananas/catalejo/blob/main/LICENSE).
+
+<!-- mcp-name: io.github.polfananas/catalejo -->
