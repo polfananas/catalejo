@@ -9,8 +9,6 @@
 Think of it as a small **SEC EDGAR for Spain**.
 
 > *Having had perfect understanding of all things from the very first, to write unto thee in order, that thou mightest know the certainty of those things.* (Luke 1:3-4)
->
-> Luke wasn't an eyewitness, so he went back to the sources, checked everything from the beginning and wrote it down in order, so his reader could be sure of what he'd been told. That's the idea behind catalejo: no press summaries, the official register itself, every filing, in order.
 
 ![catalejo in a terminal: the latest inside information, 176 BBVA filings since 2020, the whole BBVA–Sabadell takeover bid in order, and its outcome read from the CNMV's own PDF. All live data.](https://raw.githubusercontent.com/polfananas/catalejo/main/docs/demo.gif)
 
