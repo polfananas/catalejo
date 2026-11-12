@@ -12,7 +12,7 @@ Think of it as a small **SEC EDGAR for Spain**.
 >
 > Luke wasn't an eyewitness, so he went back to the sources, checked everything from the beginning and wrote it down in order, so his reader could be sure of what he'd been told. That's the idea behind catalejo: no press summaries, the official register itself, every filing, in order.
 
-![catalejo in a terminal: the latest inside information, 176 BBVA filings since 2020, the whole BBVA–Sabadell takeover bid in order, and its outcome read from the CNMV's own PDF. All live data.](docs/demo.gif)
+![catalejo in a terminal: the latest inside information, 176 BBVA filings since 2020, the whole BBVA–Sabadell takeover bid in order, and its outcome read from the CNMV's own PDF. All live data.](https://raw.githubusercontent.com/polfananas/catalejo/main/docs/demo.gif)
 
 <!-- TODO: second GIF, Claude Desktop using the MCP server -->
 
@@ -114,4 +114,4 @@ catalejo talks only to `cnmv.es`, sends an identifiable User-Agent, makes **at m
 
 The data comes from the [CNMV](https://www.cnmv.es) public registers and remains subject to the CNMV's [legal notice](https://www.cnmv.es/Portal/utilidades/NotaLegal): reproduce it faithfully, and if you ever sell it, tell your buyers it's free at cnmv.es. catalejo is not affiliated with or endorsed by the CNMV.
 
-Code: MIT. See [LICENSE](LICENSE).
+Code: MIT. See [LICENSE](https://github.com/polfananas/catalejo/blob/main/LICENSE).
