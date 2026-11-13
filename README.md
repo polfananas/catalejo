@@ -129,6 +129,10 @@ catalejo talks only to `cnmv.es`, sends an identifiable User-Agent, makes **at m
 - [ ] Takeover bids (OPAs): status, price, spread
 - [ ] Fund portfolios
 
+## Contributing
+
+Fixes and new CNMV sources are welcome. See [CONTRIBUTING.md](https://github.com/polfananas/catalejo/blob/main/CONTRIBUTING.md) and the issues labelled [`good first issue`](https://github.com/polfananas/catalejo/labels/good%20first%20issue).
+
 ## Data and license
 
 The data comes from the [CNMV](https://www.cnmv.es) public registers and remains subject to the CNMV's [legal notice](https://www.cnmv.es/Portal/utilidades/NotaLegal): reproduce it faithfully, and if you ever sell it, tell your buyers it's free at cnmv.es. catalejo is not affiliated with or endorsed by the CNMV.
