@@ -31,6 +31,10 @@ part that matters (see the README there). If you add or change a parser, save th
 page you're parsing next to the others, note its URL in the fixtures README, and
 test against it.
 
+A few checks in `tests/test_live.py` do hit the real CNMV website. They're skipped
+by default and run once a week in CI, which opens an issue if they fail. To run
+them yourself: `CATALEJO_LIVE=1 pytest tests/test_live.py -v`.
+
 ## Be gentle with the CNMV
 
 catalejo only works because the CNMV publishes this data for free. Please keep it
