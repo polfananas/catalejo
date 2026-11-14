@@ -34,6 +34,7 @@ Changelog = "https://github.com/polfananas/catalejo/blob/main/CHANGELOG.md"
 [project.optional-dependencies]
 dev = ["pytest>=8", "ruff>=0.6", "mypy>=1.10", "pypdf>=5"]
 pdf = ["pypdf>=5"]
+pandas = ["pandas>=2.0"]
 mcp = ["mcp>=1.20,<2"]
 
 [project.scripts]
