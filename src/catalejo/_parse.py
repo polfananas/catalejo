@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from datetime import date, datetime
-from urllib.parse import unquote
+from urllib.parse import unquote, urljoin
 from zoneinfo import ZoneInfo
 
 from selectolax.lexbor import LexborHTMLParser as HTMLParser
@@ -15,8 +15,13 @@ from catalejo.models import Filing, FilingKind, Security
 
 MADRID = ZoneInfo("Europe/Madrid")
 
+# Result pages live at /portal/<section>/Resultado-XX. Some entries link to a CNMV
+# page instead of a PDF, with a relative href ("../consultas/..."): resolve it.
+_RESULTS_BASE = "https://www.cnmv.es/portal/Otra-Informacion-Relevante/Resultado-OIR"
 _PAGE_INFO = re.compile(r"(\d+)\D+(\d+)")  # "Página 1 de 8" / "Page 1 out of 8"
-_REGISTRY = re.compile(r"(\d+)\s*$")
+# "Número de registro: 43521" (or "Register number: 43521" in English). Anchored on
+# the label: titles can mention the Registro Mercantil too.
+_REGISTRY = re.compile(r"(?:registro|register number)\s*:\s*(\d+)\s*$", re.IGNORECASE)
 
 
 class CNMVParseError(ValueError):
@@ -52,11 +57,10 @@ def _parse_entry(node: Node, kind: FilingKind) -> Filing:
     issuer_link = _required(node, "a[id$=hlTituloCabecera]")
     doc_link = _required(node, "a[id$=subtituloRegistroEnlace]")
 
-    registry_text = next(
-        (li.text(strip=True) for li in node.css("li.resumen") if "registro" in li.text().lower()),
-        "",
+    registry = next(
+        (m for li in node.css("li.resumen") if (m := _REGISTRY.search(li.text(strip=True)))),
+        None,
     )
-    registry = _REGISTRY.search(registry_text)
     if registry is None:
         raise CNMVParseError(f"no registry number in entry: {node.text(strip=True)[:120]!r}")
 
@@ -74,7 +78,7 @@ def _parse_entry(node: Node, kind: FilingKind) -> Filing:
         category=_text(node, "span[id$=descripcionSubtituloCabecera]"),
         title=doc_link.text(strip=True),
         registry_number=int(registry.group(1)),
-        document_url=(doc_link.attributes.get("href") or "").strip(),
+        document_url=urljoin(_RESULTS_BASE, (doc_link.attributes.get("href") or "").strip()),
         issuer_nif_raw=raw_nif,
     )
 

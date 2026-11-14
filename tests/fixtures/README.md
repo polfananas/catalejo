@@ -11,6 +11,7 @@ site header, menus, scripts or ASP.NET viewstate), and the result list keeps
 | `oir_dias3_page1.html` | `/portal/Otra-Informacion-Relevante/Resultado-OIR?dias=3` |
 | `oir_dias3_page8_last.html` | `/portal/otra-informacion-relevante/resultado-oir.aspx?dias=3&page=7` |
 | `ip_dias7_page1.html` | `/portal/Informacion-Privilegiada/Resultado-IP?dias=7` |
+| `oir_registro_in_title.html` | `/portal/Otra-Informacion-Relevante/Resultado-OIR?fechaDesde=06/11/2026&fechaHasta=06/11/2026&page=1&lang=es` (captured 2026-11-14; titles that mention the Registro Mercantil) |
 | `isin_sabadell_page1.html` | `/portal/ancv/isin.aspx?nif=A08000143` (captured 2026-11-11, 4 of 20 rows) |
 | `isin_hbx_foreign.html` | `/portal/ancv/isin.aspx?nif=N0289673F` (captured 2026-11-11) |
 
