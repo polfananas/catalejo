@@ -110,13 +110,25 @@ Because the CNMV's search pages are forms that search engines barely index. An a
 
 catalejo talks only to `cnmv.es`, sends an identifiable User-Agent, makes **at most one request per second** and caches responses on disk (`~/.cache/catalejo`, or set `CATALEJO_CACHE_DIR`). Filed documents never change, so they are downloaded once. Please keep it that way if you fork it.
 
-## Good to know
+## Known limitations
 
 - **Price-sensitive announcements (`IP`) have their own channel since 8 February 2020.** Before that, everything was published as *hechos relevantes*, which catalejo doesn't cover yet.
 - Searching by **NIF** is fast (the CNMV filters). Searching by **name** works, but scans every filing in the window, so keep the window short.
 - Times are the CNMV's registration time, to the minute.
 - Filings come in the language the issuer used, which is almost always Spanish.
+- Lists of filings are cached for up to an hour, so a filing registered a few minutes ago may not show up straight away (see Troubleshooting).
+- catalejo reads the CNMV's public web pages. If the CNMV changes them, parsing can break until catalejo is updated. Please [open an issue](https://github.com/polfananas/catalejo/issues) if it does.
+- `document_text()` extracts the text layer of the PDF. Scanned documents with no text layer come back empty: there's no OCR.
+- No data of its own yet: every call reads the CNMV live (or from the cache). There's no history of *when* catalejo first saw a filing, only the CNMV's registration time.
 - Early days: the API may still change before 1.0.
+
+## Troubleshooting
+
+- **`the MCP server needs an extra`** or **`document_text() needs pypdf`**: install the extra, `pip install "catalejo[mcp]"` or `pip install "catalejo[pdf]"`.
+- **A very recent filing is missing**: delete the cache folder (`~/.cache/catalejo`, or whatever `CATALEJO_CACHE_DIR` points to) and try again.
+- **A search by name is slow**: it pages through every filing in the window, one request per second. Search by NIF instead, or use a shorter window.
+- **`HTTP 5xx` or timeouts**: the CNMV site is having trouble. catalejo already retries a few times; wait a bit and try again.
+- **Claude doesn't show the catalejo tools**: check that `uvx` is on your `PATH` (`uvx --version`) and restart Claude after editing its config.
 
 ## Roadmap
 
