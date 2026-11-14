@@ -1,0 +1,47 @@
+name: live-check
+
+# Weekly check against the real CNMV website. If it fails, it opens an issue
+# (or comments on the open one), so a change in the CNMV pages gets noticed
+# before users hit it. It can also be started by hand from the Actions tab.
+
+on:
+  schedule:
+    - cron: "17 6 * * 1" # Mondays, 06:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install -e ".[dev,pdf]"
+      - name: Run the live checks
+        env:
+          CATALEJO_LIVE: "1"
+          CATALEJO_CACHE_DIR: ${{ runner.temp }}/catalejo-cache
+        run: pytest tests/test_live.py -v
+      - name: Open or update an issue
+        if: failure() && github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh label create live-check --color B60205 \
+            --description "The weekly check against the CNMV failed" --force
+          number=$(gh issue list --label live-check --state open --json number --jq '.[0].number')
+          if [ -n "$number" ]; then
+            gh issue comment "$number" --body "Failed again: $RUN_URL"
+          else
+            gh issue create --label live-check \
+              --title "Weekly check against the CNMV failed" \
+              --body "The weekly check against the real CNMV website failed: $RUN_URL. The CNMV may have changed its pages, or the site was down. Check the logs before touching the parsers."
+          fi

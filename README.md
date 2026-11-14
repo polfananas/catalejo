@@ -118,6 +118,7 @@ catalejo talks only to `cnmv.es`, sends an identifiable User-Agent, makes **at m
 - Filings come in the language the issuer used, which is almost always Spanish.
 - Lists of filings are cached for up to an hour, so a filing registered a few minutes ago may not show up straight away (see Troubleshooting).
 - catalejo reads the CNMV's public web pages. If the CNMV changes them, parsing can break until catalejo is updated. Please [open an issue](https://github.com/polfananas/catalejo/issues) if it does.
+- A few filings (voting rights, annual reports...) link to a CNMV page instead of a PDF. `document_text()` raises `ValueError` for those.
 - `document_text()` extracts the text layer of the PDF. Scanned documents with no text layer come back empty: there's no OCR.
 - No data of its own yet: every call reads the CNMV live (or from the cache). There's no history of *when* catalejo first saw a filing, only the CNMV's registration time.
 - Early days: the API may still change before 1.0.

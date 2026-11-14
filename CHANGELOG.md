@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Fix: filings whose title mentions the *Registro Mercantil* made `filings()` fail with "no registry number in entry". Found by the new weekly check against the real CNMV website.
+- Fix: some filings link to a CNMV page instead of a PDF, with a relative link. `document_url` is now always a full URL.
+
 ## 0.1.1 (2026-11-12)
 
 - `catalejo` command line: `filings`, `securities`, `text` and `mcp`, with table, CSV or JSON output. Also runs as `python -m catalejo`, or without installing via `uvx catalejo`.

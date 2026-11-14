@@ -74,6 +74,20 @@ def test_page_without_results_or_paginator() -> None:
     assert (page.page, page.total_pages) == (1, 1)
 
 
+def test_title_mentioning_the_registro_mercantil() -> None:
+    # The title says "...en el Registro Mercantil de Barcelona": the registry number
+    # must still come from the "Número de registro" line.
+    page = parse_results_page(load("oir_registro_in_title.html"), "OIR")
+    assert [f.registry_number for f in page.filings] == [43521, 43520]
+    assert page.filings[0].issuer == "FLUIDRA, S.A."
+    assert page.filings[0].title.endswith("en el Registro Mercantil de Barcelona")
+    # This entry links to a CNMV page, not a PDF, and the href is relative.
+    assert page.filings[0].document_url == (
+        "https://www.cnmv.es/portal/otra-informacion-regulada-corporativa/"
+        "derechos-voto-capital.aspx?Nif=A-17728593"
+    )
+
+
 def test_broken_entry_raises_instead_of_guessing() -> None:
     html = """
     <ul id="listaElementosPrimernivel">
