@@ -38,6 +38,24 @@ Python 3.10+. Or try it without installing anything, with [uv](https://docs.astr
 uvx catalejo filings --days 3 --kind IP
 ```
 
+## Example: a takeover bid, as it happened
+
+How BBVA's bid for Banco Sabadell started, straight from the official register, to the minute:
+
+```bash
+catalejo filings --issuer A08000143 --kind IP --since 2024-04-30 --until 2024-05-31
+```
+
+```
+2024-05-09 07:06  IP   BANCO DE SABADELL, S.A. (BA…  BBVA comunica el anuncio previo de oferta pública voluntaria de adquisición de ac…
+2024-05-08 08:28  IP   BANCO DE SABADELL, S.A.       Banco Sabadell remite la comunicación que recibió el Presidente del Consejo de Ad…
+2024-05-06 19:11  IP   BANCO DE SABADELL, S.A.       Banco Sabadell comunica decisiones adoptadas por el Consejo de Administración.
+2024-05-01 13:19  IP   BANCO DE SABADELL, S.A. (BA…  BBVA, S.A. comunica la carta enviada al Consejo de Administración de Banco de Sab…
+2024-04-30 14:23  IP   BANCO DE SABADELL, S.A.       Banco Sabadell confirma que ha recibido una propuesta escrita indicativa de Banco…
+```
+
+Each line links to the original filed document (`--format json` or `csv` to get the links). Note that BBVA's announcements appear under Sabadell: the CNMV files them under the company they are about.
+
 ## What you can get
 
 **Price-sensitive announcements (`IP`) and other regulatory announcements (`OIR`)**, the two channels issuers use to disclose anything that can move the price: results, M&A, takeover bids, guidance, board changes, buybacks...
@@ -54,7 +72,7 @@ catalejo.filings(days=30, kind="IP", issuer="cellnex")
 catalejo.filings(since=date(2020, 1, 1), kind="IP", issuer="A64907306")
 ```
 
-Each `Filing` has `kind`, `registered_at` (timezone-aware, Madrid), `issuer`, `issuer_nif`, `category`, `title`, `registry_number` and `document_url`.
+Each `Filing` has `kind`, `registered_at` (timezone-aware, Madrid), `issuer` (the company the filing is about), `issuer_nif`, `category`, `title`, `registry_number` and `document_url`.
 
 **The text of the filed document:**
 
@@ -83,7 +101,7 @@ catalejo text "<document_url of a filing>"            # needs catalejo[pdf]
 
 ## Use it from Claude (MCP)
 
-catalejo ships an MCP server with two tools, `latest_filings` and `issuer_filings`, so you can ask things like *"What price-sensitive news has Cellnex published since 2023? Group it by topic."*
+catalejo ships an MCP server with two tools, `latest_filings` and `issuer_filings`, so you can ask things like *"What price-sensitive news has Cellnex published since 2023? Group it by topic."* Results come with `found`, `returned` and `complete`, so the agent knows when a search was cut short.
 
 **Claude Desktop:** add this to `claude_desktop_config.json` (Settings → Developer → Edit Config) and restart the app:
 
@@ -104,7 +122,7 @@ That needs [uv](https://docs.astral.sh/uv/). If you'd rather `pip install "catal
 
 ## Why not just ask an AI with web search?
 
-Because the CNMV's search pages are forms that search engines barely index. An agent with web search ends up reading press articles: incomplete, late, and you can't tell what's missing. With catalejo it reads the official register directly: every filing, with its exact time, registry number and a link to the original document. And it can do what web search can't, like going through years of history or across every issuer.
+Because the CNMV's search pages are forms that search engines barely index. An agent with web search ends up reading press articles: incomplete, late, and you can't tell what's missing. With catalejo it reads the official register directly: each filing with its exact time, registry number and a link to the original document. And it can do what web search can't, like going through years of a company's history, and it tells you when a search came back incomplete.
 
 ## Being a good citizen
 
@@ -121,6 +139,9 @@ catalejo talks only to `cnmv.es`, sends an identifiable User-Agent, makes **at m
 - A few filings (voting rights, annual reports...) link to a CNMV page instead of a PDF. `document_text()` raises `ValueError` for those.
 - `document_text()` extracts the text layer of the PDF. Scanned documents with no text layer come back empty: there's no OCR.
 - No data of its own yet: every call reads the CNMV live (or from the cache). There's no history of *when* catalejo first saw a filing, only the CNMV's registration time.
+- **Each search reads at most 50 pages (500 filings) per kind.** That's about a month of OIR across all issuers, and years for a single NIF. Past that you get the newest ones and an `IncompleteResultsWarning`; pass `strict=True` (or `--strict`) to get an error instead. A page that doesn't look like a CNMV result raises `CNMVParseError` rather than coming back empty.
+- `issuer` is the company a filing is about, not always who filed it: a bidder's announcements about a takeover are filed under the target.
+- `securities()` lists the ISINs the CNMV has active today. Deregistered ones (matured bonds, for example) don't appear, so it isn't a history.
 - Early days: the API may still change before 1.0.
 
 ## Troubleshooting

@@ -1,6 +1,6 @@
 """catalejo: Spanish CNMV public data, made usable."""
 
-__version__ = "0.1.2"
+__version__ = "0.1.3"
 
 from catalejo.documents import document_text
 from catalejo.errors import (
