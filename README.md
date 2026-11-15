@@ -30,6 +30,7 @@ Think of it as a small **SEC EDGAR for Spain**.
 pip install catalejo            # library + command line
 pip install "catalejo[mcp]"     # + MCP server for Claude and other agents
 pip install "catalejo[pdf]"     # + text extraction from filed PDFs
+pip install "catalejo[pandas]"  # + pandas DataFrame conversion
 ```
 
 Python 3.10+. Or try it without installing anything, with [uv](https://docs.astral.sh/uv/):
@@ -46,7 +47,7 @@ uvx catalejo filings --days 3 --kind IP
 from datetime import date
 import catalejo
 
-catalejo.filings(days=3)                          # everything from the last 3 days, IP + OIR
+catalejo.filings(days=3)  # everything from the last 3 days, IP + OIR
 catalejo.filings(days=30, kind="IP", issuer="cellnex")
 
 # Full history for one company. Filtering by NIF (Spanish tax id) is done
@@ -60,7 +61,7 @@ Each `Filing` has `kind`, `registered_at` (timezone-aware, Madrid), `issuer`, `i
 
 ```python
 f = catalejo.filings(days=10, kind="IP", issuer="A64907306")[0]
-print(catalejo.document_text(f))     # needs catalejo[pdf]
+print(catalejo.document_text(f))  # needs catalejo[pdf]
 ```
 
 **The securities (ISINs) of an issuer**, shares and bonds:
@@ -69,6 +70,31 @@ print(catalejo.document_text(f))     # needs catalejo[pdf]
 >>> [s for s in catalejo.securities("A64907306") if s.is_share]
 [Security(isin='ES0105066007', fisn='CLNX/AC 0.25', cfi='ESVUFB', ...)]
 ```
+
+## Pandas DataFrames
+
+Install the optional pandas dependency:
+
+```bash
+pip install "catalejo[pandas]"
+```
+
+Convert filings or securities into DataFrames:
+
+```python
+import catalejo
+
+filings_df = catalejo.to_frame(catalejo.filings(days=30, kind="IP"))
+securities_df = catalejo.to_frame(catalejo.securities("A64907306"))
+```
+
+For empty results, specify the dataclass to preserve its columns:
+
+```python
+empty_df = catalejo.to_frame([], model=catalejo.Filing)
+```
+
+Timezone-aware filing timestamps are preserved.
 
 ## Command line
 
