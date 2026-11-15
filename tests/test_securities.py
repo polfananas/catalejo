@@ -2,9 +2,11 @@ from datetime import date
 from pathlib import Path
 
 import httpx
+import pytest
 
 from catalejo._http import HttpClient
-from catalejo._parse import parse_securities_page
+from catalejo._parse import CNMVParseError, parse_securities_page
+from catalejo.errors import IncompleteResultsError, IncompleteResultsWarning
 from catalejo.securities import securities
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -51,10 +53,35 @@ def test_tries_the_dashed_nif_when_the_plain_one_finds_nothing(tmp_path: Path) -
         seen.append(nif)
         if nif == "A-08000143":
             return httpx.Response(200, text=load("isin_hbx_foreign.html"))
-        return httpx.Response(200, text="<section id='maincontent'></section>")
+        return httpx.Response(200, text=load("isin_not_found.html"))
 
     client = HttpClient(cache_dir=tmp_path, transport=httpx.MockTransport(handler), min_interval=0)
     result = securities("A08000143", client=client)
 
     assert seen == ["A08000143", "A-08000143"]
     assert [s.isin for s in result] == ["GB00BNXJB679"]
+
+
+def _client(tmp_path: Path, html: str) -> HttpClient:
+    return HttpClient(
+        cache_dir=tmp_path,
+        transport=httpx.MockTransport(lambda request: httpx.Response(200, text=html)),
+        min_interval=0,
+    )
+
+
+def test_not_found_is_an_empty_list(tmp_path: Path) -> None:
+    assert securities("A00000000", client=_client(tmp_path, load("isin_not_found.html"))) == []
+
+
+def test_unexpected_page_raises(tmp_path: Path) -> None:
+    with pytest.raises(CNMVParseError, match="not found"):
+        securities("A08000143", client=_client(tmp_path, "<html><body></body></html>"))
+
+
+def test_hitting_max_pages_warns_or_raises(tmp_path: Path) -> None:
+    client = _client(tmp_path, load("isin_sabadell_page1.html"))  # "page 1 of 4"
+    with pytest.warns(IncompleteResultsWarning, match="max_pages=1"):
+        assert len(securities("A08000143", client=client, max_pages=1)) == 4
+    with pytest.raises(IncompleteResultsError):
+        securities("A08000143", client=client, max_pages=1, strict=True)

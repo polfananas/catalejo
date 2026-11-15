@@ -4,14 +4,14 @@ from __future__ import annotations
 
 from catalejo._http import HttpClient
 from catalejo._parse import normalize_nif, parse_securities_page
-from catalejo.filings import _default_client
+from catalejo.filings import _default_client, incomplete
 from catalejo.models import Security
 
 ISIN_URL = "https://www.cnmv.es/portal/ancv/isin.aspx"
 
 
 def securities(
-    nif: str, *, client: HttpClient | None = None, max_pages: int = 50
+    nif: str, *, client: HttpClient | None = None, max_pages: int = 50, strict: bool = False
 ) -> list[Security]:
     """All ISINs the CNMV lists for an issuer: shares, bonds, notes...
 
@@ -27,17 +27,21 @@ def securities(
         raise ValueError("nif can't be empty")
     # Like the filings search, the CNMV only matches the NIF in the form it stores it.
     for variant in (base, f"{base[0]}-{base[1:]}"):
-        found = _fetch(client, variant, max_pages)
+        found = _fetch(client, variant, max_pages, strict)
         if found:
             return found
     return []
 
 
-def _fetch(client: HttpClient, nif: str, max_pages: int) -> list[Security]:
+def _fetch(client: HttpClient, nif: str, max_pages: int, strict: bool) -> list[Security]:
     out: list[Security] = []
     for page_index in range(max_pages):
         page = parse_securities_page(client.get(ISIN_URL, {"nif": nif, "page": page_index}).text)
         out.extend(page.securities)
         if page.is_last or not page.securities:
             break
+    else:
+        incomplete(
+            f"ISINs of {nif}: stopped after max_pages={max_pages}, some are missing.", strict
+        )
     return out

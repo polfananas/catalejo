@@ -67,11 +67,26 @@ def test_price_sensitive_page() -> None:
     assert "Carlos Muñoz" in hbx.title
 
 
-def test_page_without_results_or_paginator() -> None:
-    html = '<section id="maincontent"><ul id="listaElementosPrimernivel"></ul></section>'
-    page = parse_results_page(html, "IP")
+def test_no_results_page() -> None:
+    page = parse_results_page(load("oir_no_results.html"), "OIR")
     assert page.filings == []
     assert (page.page, page.total_pages) == (1, 1)
+    assert page.is_last
+
+
+@pytest.mark.parametrize(
+    "html",
+    [
+        "",
+        "<html><body><h1>Mantenimiento</h1></body></html>",
+        '<section id="maincontent"><ul id="listaElementosPrimernivel"></ul></section>',
+    ],
+)
+def test_page_without_results_or_notice_raises(html: str) -> None:
+    # An empty list is only trusted when the CNMV says "no data": anything else may
+    # be a changed layout or an error page, and returning [] would hide it.
+    with pytest.raises(CNMVParseError):
+        parse_results_page(html, "IP")
 
 
 def test_title_mentioning_the_registro_mercantil() -> None:

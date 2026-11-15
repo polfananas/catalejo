@@ -10,6 +10,7 @@ from typing import Literal
 
 from catalejo._http import HttpClient
 from catalejo._parse import MADRID, normalize_nif, parse_results_page
+from catalejo.errors import IncompleteResultsError, IncompleteResultsWarning
 from catalejo.models import Filing, FilingKind
 
 BASE = "https://www.cnmv.es/portal"
@@ -41,12 +42,17 @@ def filings(
     since: date | None = None,
     until: date | None = None,
     max_pages: int = 50,
+    strict: bool = False,
     client: HttpClient | None = None,
 ) -> list[Filing]:
     """Filings registered at the CNMV, newest first.
 
     By default the last `days` days. Pass `since` (and optionally `until`) for a
     fixed date range instead, e.g. to pull history.
+
+    Each search reads at most `max_pages` pages of 10 filings per kind. If there
+    are more, you get the newest ones and an :class:`IncompleteResultsWarning`;
+    with ``strict=True``, an :class:`IncompleteResultsError` instead.
 
     >>> import catalejo
     >>> catalejo.filings(days=3, kind="IP")  # doctest: +SKIP
@@ -61,18 +67,18 @@ def filings(
     nif = _as_nif(issuer) if issuer is not None else None
 
     result: list[Filing] = []
+    # IP and OIR are numbered separately. A filing can show up twice if a new one
+    # is registered while we page through the results (everything shifts by one).
+    seen: set[tuple[str, int]] = set()
     for k in kinds:
-        if nif:
-            # Ask the CNMV for just this issuer. It only matches the NIF in the exact
-            # form it stores it, and that can have a dash or not, so try both.
-            seen = set()
-            for variant in (nif, f"{nif[0]}-{nif[1:]}"):
-                for f in _fetch_all_pages(client, k, {**window, "nif": variant}, max_pages):
-                    if f.registry_number not in seen:
-                        seen.add(f.registry_number)
-                        result.append(f)
-        else:
-            result.extend(_fetch_all_pages(client, k, window, max_pages))
+        # By NIF, ask the CNMV for just this issuer. It only matches the NIF in the
+        # exact form it stores it, with or without a dash, so try both.
+        searches = [{**window, "nif": v} for v in (nif, f"{nif[0]}-{nif[1:]}")] if nif else [window]
+        for params in searches:
+            for f in _fetch_all_pages(client, k, params, max_pages, strict):
+                if (f.kind, f.registry_number) not in seen:
+                    seen.add((f.kind, f.registry_number))
+                    result.append(f)
 
     if issuer is not None:
         result = [f for f in result if matches_issuer(f, issuer)]
@@ -82,7 +88,11 @@ def filings(
 
 
 def _fetch_all_pages(
-    client: HttpClient, kind: FilingKind, params: dict[str, str | int], max_pages: int
+    client: HttpClient,
+    kind: FilingKind,
+    params: dict[str, str | int],
+    max_pages: int,
+    strict: bool,
 ) -> list[Filing]:
     out: list[Filing] = []
     for page_index in range(max_pages):  # the CNMV's `page` param is zero-based
@@ -92,12 +102,19 @@ def _fetch_all_pages(
         if page.is_last or not page.filings:
             break
     else:
-        warnings.warn(
-            f"stopped after max_pages={max_pages}; results are incomplete. "
-            "Narrow the date range or raise max_pages.",
-            stacklevel=3,
+        incomplete(
+            f"{kind} filings: stopped after max_pages={max_pages}, older ones are missing. "
+            "Narrow the date range, search by NIF or raise max_pages.",
+            strict,
         )
     return out
+
+
+def incomplete(message: str, strict: bool) -> None:
+    """Report a search that stopped at max_pages: warn, or raise if strict."""
+    if strict:
+        raise IncompleteResultsError(message)
+    warnings.warn(message, IncompleteResultsWarning, stacklevel=4)
 
 
 def _window(days: int, since: date | None, until: date | None) -> dict[str, str | int]:
