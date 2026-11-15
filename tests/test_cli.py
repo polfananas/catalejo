@@ -1,6 +1,7 @@
 import csv
 import io
 import json
+import warnings
 from datetime import date, datetime
 from typing import Any
 
@@ -8,6 +9,7 @@ import pytest
 
 from catalejo import cli
 from catalejo._parse import MADRID
+from catalejo.errors import IncompleteResultsError, IncompleteResultsWarning
 from catalejo.models import Filing, Security
 
 FILING = Filing(
@@ -79,7 +81,7 @@ def test_securities_only_shares(
         Security(isin="ES0105066007", fisn="CLNX/AC 0.25", cfi="ESVUFB", outstanding=706_429_811),
         Security(isin="XS2300292617", fisn="CLNX/OB 0.75", cfi="DBFTFB"),
     ]
-    monkeypatch.setattr(cli.catalejo, "securities", lambda nif: secs)
+    monkeypatch.setattr(cli.catalejo, "securities", lambda nif, strict=False: secs)
 
     cli.main(["securities", "A64907306", "--shares"])
 
@@ -99,3 +101,34 @@ def test_errors_go_to_stderr(
 
     assert cli.main(["filings", "--issuer", ""]) == 1
     assert "issuer must not be empty" in capsys.readouterr().err
+
+
+def test_incomplete_results_warn_on_stderr(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    def fake_filings(**kwargs: Any) -> list[Filing]:
+        warnings.warn("stopped after max_pages=50", IncompleteResultsWarning, stacklevel=2)
+        return [FILING]
+
+    monkeypatch.setattr(cli.catalejo, "filings", fake_filings)
+    assert cli.main(["filings", "--days", "60"]) == 0
+
+    captured = capsys.readouterr()
+    assert "2025-10-16 18:41" in captured.out  # you still get the results
+    assert "catalejo: warning: stopped after max_pages=50" in captured.err
+
+
+def test_strict_fails_on_incomplete_results(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    calls: list[dict[str, Any]] = []
+
+    def fake_filings(**kwargs: Any) -> list[Filing]:
+        calls.append(kwargs)
+        raise IncompleteResultsError("stopped after max_pages=50")
+
+    monkeypatch.setattr(cli.catalejo, "filings", fake_filings)
+    assert cli.main(["filings", "--days", "60", "--strict"]) == 1
+
+    assert calls[0]["strict"] is True
+    assert "catalejo: stopped after max_pages=50" in capsys.readouterr().err

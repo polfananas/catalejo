@@ -9,13 +9,18 @@ import json
 import os
 import shutil
 import sys
+import warnings
 from collections.abc import Callable, Sequence
 from datetime import date, datetime
 from typing import Any, Literal
 
 import catalejo
-from catalejo._http import CNMVRequestError
-from catalejo._parse import CNMVParseError
+from catalejo.errors import (
+    CNMVParseError,
+    CNMVRequestError,
+    IncompleteResultsError,
+    IncompleteResultsWarning,
+)
 from catalejo.models import Filing, FilingKind, Security
 
 
@@ -98,11 +103,17 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--until", type=_end, help="YYYY or YYYY-MM-DD")
     p.add_argument("--limit", type=int, help="only the N newest")
     p.add_argument("--format", choices=["table", "csv", "json"], default="table")
+    p.add_argument(
+        "--strict", action="store_true", help="fail instead of warning if results are incomplete"
+    )
 
     p = sub.add_parser("securities", help="ISINs registered under an issuer")
     p.add_argument("nif", help='Spanish tax id, e.g. "A64907306"')
     p.add_argument("--shares", action="store_true", help="only shares")
     p.add_argument("--format", choices=["table", "csv", "json"], default="table")
+    p.add_argument(
+        "--strict", action="store_true", help="fail instead of warning if results are incomplete"
+    )
 
     p = sub.add_parser("text", help="text of a filed document (needs catalejo[pdf])")
     p.add_argument("url", help="the document_url of a filing")
@@ -128,26 +139,46 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.command == "mcp":
         return _run_mcp()
     try:
-        if args.command == "filings":
-            kind: FilingKind | Literal["all"] = "all" if args.kind == "ALL" else args.kind
-            found = catalejo.filings(
-                days=args.days, kind=kind, issuer=args.issuer, since=args.since, until=args.until
-            )
-            _emit(found[: args.limit], args.format, Filing, _filings_table)
-        elif args.command == "securities":
-            secs = catalejo.securities(args.nif)
-            if args.shares:
-                secs = [s for s in secs if s.is_share]
-            _emit(secs, args.format, Security, _securities_table)
-        else:
-            print(catalejo.document_text(args.url))
-    except (CNMVRequestError, CNMVParseError, ValueError, ImportError) as e:
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always", IncompleteResultsWarning)
+            _run(args)
+    except (
+        CNMVRequestError,
+        CNMVParseError,
+        IncompleteResultsError,
+        ValueError,
+        ImportError,
+    ) as e:
         print(f"catalejo: {e}", file=sys.stderr)
         return 1
     except BrokenPipeError:
         # `catalejo filings | head`: the reader went away, that's fine
         os.dup2(os.open(os.devnull, os.O_WRONLY), sys.stdout.fileno())
+    for w in caught:
+        if issubclass(w.category, IncompleteResultsWarning):
+            print(f"catalejo: warning: {w.message} (--strict to fail instead)", file=sys.stderr)
     return 0
+
+
+def _run(args: argparse.Namespace) -> None:
+    if args.command == "filings":
+        kind: FilingKind | Literal["all"] = "all" if args.kind == "ALL" else args.kind
+        found = catalejo.filings(
+            days=args.days,
+            kind=kind,
+            issuer=args.issuer,
+            since=args.since,
+            until=args.until,
+            strict=args.strict,
+        )
+        _emit(found[: args.limit], args.format, Filing, _filings_table)
+    elif args.command == "securities":
+        secs = catalejo.securities(args.nif, strict=args.strict)
+        if args.shares:
+            secs = [s for s in secs if s.is_share]
+        _emit(secs, args.format, Security, _securities_table)
+    else:
+        print(catalejo.document_text(args.url))
 
 
 if __name__ == "__main__":
