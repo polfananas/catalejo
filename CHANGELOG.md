@@ -1,9 +1,10 @@
 # Changelog
 
-## Unreleased
+## 0.1.2 (2026-11-15)
 
 - Fix: filings whose title mentions the *Registro Mercantil* made `filings()` fail with "no registry number in entry". Found by the new weekly check against the real CNMV website.
 - Fix: some filings link to a CNMV page instead of a PDF, with a relative link. `document_url` is now always a full URL.
+- A weekly check against the real CNMV website now runs in CI and opens an issue if the CNMV pages change.
 
 ## 0.1.1 (2026-11-12)
 

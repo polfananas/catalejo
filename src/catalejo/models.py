@@ -8,7 +8,7 @@ from typing import Literal
 from urllib.parse import parse_qs, urlsplit
 
 FilingKind = Literal["IP", "OIR"]
-"""``IP`` = información privilegiada (inside information, art. 17 MAR).
+"""``IP`` = información privilegiada (price-sensitive information, art. 17 MAR).
 ``OIR`` = otra información relevante (other relevant information)."""
 
 

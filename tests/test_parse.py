@@ -55,7 +55,7 @@ def test_last_page_and_nif_with_dash() -> None:
     assert acs.category == "Programas de recompra de acciones, estabilización y autocartera"
 
 
-def test_inside_information_page() -> None:
+def test_price_sensitive_page() -> None:
     page = parse_results_page(load("ip_dias7_page1.html"), "IP")
 
     assert (page.page, page.total_pages) == (1, 2)
