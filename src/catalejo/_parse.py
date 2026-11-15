@@ -18,6 +18,10 @@ MADRID = ZoneInfo("Europe/Madrid")
 # Result pages live at /portal/<section>/Resultado-XX. Some entries link to a CNMV
 # page instead of a PDF, with a relative href ("../consultas/..."): resolve it.
 _RESULTS_BASE = "https://www.cnmv.es/portal/Otra-Informacion-Relevante/Resultado-OIR"
+# What the CNMV shows when a search finds nothing. A page with no results and
+# without this notice isn't what we expect (changed layout, error page...): fail.
+_NO_FILINGS = "[id$=wucSinDatos_divAviso]"
+_NO_SECURITIES = "[id$=ContentPrincipal_divAviso]"  # "...no ha sido encontrado..."
 _PAGE_INFO = re.compile(r"(\d+)\D+(\d+)")  # "Página 1 de 8" / "Page 1 out of 8"
 # "Número de registro: 43521" (or "Register number: 43521" in English). Anchored on
 # the label: titles can mention the Registro Mercantil too.
@@ -42,7 +46,14 @@ class ResultsPage:
 
 def parse_results_page(html: str, kind: FilingKind) -> ResultsPage:
     tree = HTMLParser(html)
-    filings = [_parse_entry(node, kind) for node in tree.css("#listaElementosPrimernivel > li")]
+    entries = tree.css("#listaElementosPrimernivel > li")
+    if not entries:
+        if tree.css_first(_NO_FILINGS) is None:
+            raise CNMVParseError(
+                "no filings and no 'no data' notice on the page: the CNMV page may have changed"
+            )
+        return ResultsPage(filings=[], page=1, total_pages=1)
+    filings = [_parse_entry(node, kind) for node in entries]
     page, total = _parse_page_info(tree)
     return ResultsPage(filings=filings, page=page, total_pages=total)
 
@@ -122,8 +133,17 @@ class SecuritiesPage:
 
 def parse_securities_page(html: str) -> SecuritiesPage:
     tree = HTMLParser(html)
+    rows = tree.css("table#ctl00_ContentPrincipal_grdDatos tbody tr")
+    if not rows:
+        notice = tree.css_first(_NO_SECURITIES)
+        text = notice.text().lower() if notice is not None else ""
+        if "encontrado" not in text and "not found" not in text:
+            raise CNMVParseError(
+                "no ISINs and no 'not found' notice on the page: the CNMV page may have changed"
+            )
+        return SecuritiesPage(securities=[], page=1, total_pages=1)
     securities = []
-    for row in tree.css("table#ctl00_ContentPrincipal_grdDatos tbody tr"):
+    for row in rows:
         cells = {
             (td.attributes.get("data-th") or ""): td.text().strip() or None for td in row.css("td")
         }

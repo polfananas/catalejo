@@ -6,6 +6,7 @@ import pytest
 
 from catalejo._http import HttpClient
 from catalejo._parse import MADRID
+from catalejo.errors import CNMVParseError, IncompleteResultsError, IncompleteResultsWarning
 from catalejo.filings import filings, matches_issuer
 from catalejo.models import Filing
 
@@ -102,7 +103,21 @@ def test_empty_issuer_is_rejected() -> None:
         matches_issuer(_filing("CELLNEX TELECOM, S.A.", "A64907306"), "   ")
 
 
-EMPTY_PAGE = '<section id="maincontent"><ul id="listaElementosPrimernivel"></ul></section>'
+EMPTY_PAGE = (FIXTURES / "oir_no_results.html").read_text(encoding="utf-8")
+
+
+def _client_for(tmp_path: Path, pages: dict[str, str]) -> HttpClient:
+    """A client whose CNMV answers each zero-based `page` with the given HTML."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, text=pages[request.url.params.get("page", "0")])
+
+    return HttpClient(
+        cache_dir=tmp_path,
+        transport=httpx.MockTransport(handler),
+        min_interval=0,
+        sleep=lambda s: None,
+    )
 
 
 def test_nif_query_is_filtered_by_the_cnmv(tmp_path: Path) -> None:
@@ -164,5 +179,43 @@ def test_since_after_until_is_an_error(client: HttpClient) -> None:
 
 
 def test_hitting_max_pages_warns(client: HttpClient) -> None:
-    with pytest.warns(UserWarning, match="incomplete"):
-        filings(days=7, kind="IP", max_pages=1, client=client)
+    with pytest.warns(IncompleteResultsWarning, match="max_pages=1"):
+        result = filings(days=7, kind="IP", max_pages=1, client=client)
+    assert result  # you still get the newest ones
+
+
+def test_hitting_max_pages_raises_when_strict(client: HttpClient) -> None:
+    with pytest.raises(IncompleteResultsError, match="max_pages=1"):
+        filings(days=7, kind="IP", max_pages=1, strict=True, client=client)
+
+
+def test_reaching_the_last_page_exactly_is_not_incomplete(client: HttpClient) -> None:
+    # Two pages of results and max_pages=2: complete, so no warning even in strict mode.
+    assert filings(days=7, kind="IP", max_pages=2, strict=True, client=client)
+
+
+def test_no_results_is_an_empty_list(tmp_path: Path) -> None:
+    client = _client_for(tmp_path, {"0": EMPTY_PAGE})
+    assert filings(days=7, kind="OIR", strict=True, client=client) == []
+
+
+def test_unexpected_page_raises_instead_of_returning_nothing(tmp_path: Path) -> None:
+    # e.g. a maintenance page served with HTTP 200, or a redesign of the site
+    client = _client_for(tmp_path, {"0": "<html><body><p>Servicio no disponible</p></body></html>"})
+    with pytest.raises(CNMVParseError, match="no 'no data' notice"):
+        filings(days=7, kind="OIR", client=client)
+
+
+def test_filings_repeated_across_pages_come_once(tmp_path: Path) -> None:
+    # If a filing is registered while we page, the last one of a page shows up
+    # again at the top of the next. Simulate it with the same two filings twice.
+    page = (FIXTURES / "oir_registro_in_title.html").read_text(encoding="utf-8")
+    client = _client_for(
+        tmp_path,
+        {
+            "0": page.replace("Página 2 de 3", "Página 1 de 2"),
+            "1": page.replace("Página 2 de 3", "Página 2 de 2"),
+        },
+    )
+    result = filings(days=7, kind="OIR", client=client)
+    assert [f.registry_number for f in result] == [43521, 43520]

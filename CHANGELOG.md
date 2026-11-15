@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- A page with no results is only trusted when the CNMV says "no data". Anything else (a changed layout, an error page served as HTTP 200) now raises `CNMVParseError` instead of silently returning an empty list. Same for `securities()`.
+- Searches that stop at `max_pages` now emit `IncompleteResultsWarning` (also in `securities()`, which used to stop silently). Pass `strict=True` to get an `IncompleteResultsError` instead.
+- `filings()` no longer returns the same filing twice when a new one is registered while it pages through the results.
+- The exceptions and the warning are importable from `catalejo`.
+
 ## 0.1.2 (2026-11-15)
 
 - Fix: filings whose title mentions the *Registro Mercantil* made `filings()` fail with "no registry number in entry". Found by the new weekly check against the real CNMV website.
