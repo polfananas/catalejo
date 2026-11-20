@@ -20,7 +20,7 @@ RESULT_URLS: dict[FilingKind, str] = {
 }
 
 # Spanish NIF/CIF shapes: B12345678, A1234567B, 12345678Z (foreign issuers: N1234567X)
-MAX_DAYS = 90  # the CNMV answers HTTP 400 above ~91; longer windows go as a date range
+MAX_DAYS = 90  # `dias` takes up to 99 (100+ is HTTP 400); longer windows go as a date range
 
 _NIF = re.compile(r"^(?:[A-Z]\d{7}[A-Z0-9]|\d{8}[A-Z])$")
 
